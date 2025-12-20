@@ -1,0 +1,53 @@
+esphome:
+  name: esp32-bluetooth-proxy
+  friendly_name: WiFi Bluetooth Proxy
+  min_version: 2025.8.0
+  name_add_mac_suffix: true
+
+esp32:
+  variant: esp32
+  framework:
+    type: esp-idf
+
+web_server:
+  local: true
+  auth:
+    username: !secret web_server_username
+    password: !secret web_server_password
+
+wifi:
+  ap:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+captive_portal:
+
+logger:
+
+api:
+#  password: !secret api_password
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    id: ota_esphome
+    password: !secret ota_password
+
+esp32_ble_tracker:
+  scan_parameters:
+    # We currently use the defaults to ensure Bluetooth
+    # can co-exist with WiFi In the future we may be able to
+    # enable the built-in coexistence logic in ESP-IDF
+    active: true
+
+bluetooth_proxy:
+  active: true
+
+button:
+  - platform: safe_mode
+    id: button_safe_mode
+    name: Safe Mode Boot
+
+  - platform: factory_reset
+    id: factory_reset_btn
+    name: Factory reset

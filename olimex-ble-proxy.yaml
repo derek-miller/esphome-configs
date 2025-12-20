@@ -1,0 +1,58 @@
+esphome:
+  name: olimex-bluetooth-proxy
+  friendly_name: Olimex Bluetooth Proxy
+  min_version: 2025.8.0
+  name_add_mac_suffix: true
+
+esp32:
+  board: esp32-poe-iso
+  variant: esp32
+  framework:
+    type: esp-idf
+
+web_server:
+  local: true
+  auth:
+    username: !secret web_server_username
+    password: !secret web_server_password
+
+ethernet:
+  type: LAN8720
+  mdc_pin: GPIO23
+  mdio_pin: GPIO18
+  clk:
+    mode: CLK_OUT
+    pin: GPIO17
+  phy_addr: 0
+  power_pin: GPIO12
+
+logger:
+
+api:
+#  password: !secret api_password
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    id: ota_esphome
+    password: !secret ota_password
+
+esp32_ble_tracker:
+# The default scan parameters are recommended.
+# Aggressive scan settings (e.g., interval/window of 1100ms) typically
+# provide no benefit while increasing CPU usage and may cause
+# overheating on some PoE-based proxies.
+
+bluetooth_proxy:
+  active: true
+  connection_slots: 4
+
+button:
+  - platform: safe_mode
+    id: button_safe_mode
+    name: Safe Mode Boot
+
+  - platform: factory_reset
+    id: factory_reset_btn
+    name: Factory reset

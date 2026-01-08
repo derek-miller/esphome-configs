@@ -1,6 +1,6 @@
 # 1. SUBSTITUTIONS (Names to be used in sensor IDs)
 substitutions:
-  name: "slzb-06-zigbee_bluetooth"
+  name: "slzb-06-zigbee-bluetooth"
   friendly_name: "SMLIGHT SLZB-06 (Zigbee & Bluetooth)"
 
 
@@ -109,6 +109,9 @@ mdns:
 
 
 # 5. BLLUETOOTH PROXY COMPONENTS
+esp32_ble:
+  max_connections: 4
+
 esp32_ble_tracker:
 #  scan_parameters:
 #    interval: 1100ms
@@ -129,7 +132,7 @@ bluetooth_proxy:
 ## Upteime information as sensor
 text_sensor:
   - platform: template
-    name: "SLZB-06 Uptime"
+    name: "Uptime"
     lambda: |-
       uint32_t dur = id(uptime_s).state;
       int dys = 0;
@@ -163,7 +166,7 @@ sensor:
 ## Status of physical button - sensor
 binary_sensor:
   - platform: gpio
-    name: "Physical button status"
+    name: "Physical Button Status"
     icon: mdi:toggle-switch
     id: gpio35btn1
     pin:
@@ -176,44 +179,22 @@ binary_sensor:
         - switch.toggle: modeSwitchTemplate
   - platform: stream_server
     stream_server: streamServer
-    name: "SLZB-06* Serial Connected"
+    name: "Serial Connected"
 
 # 7. SWITCHES
 ## ESP32 Restart
 switch:
-  - platform: restart
-    id: coreRestart
-    name: "Core only restart"
   ## Zigbee Restart
   - platform: gpio
     pin: 33
     id: zRST_gpio
     inverted: yes
     restore_mode: ALWAYS_OFF
-  - platform: template
-    name: "Zigbee Restart"
-    icon: mdi:toggle-switch
-    id: zRST
-    turn_on_action:
-      - switch.turn_on: zRST_gpio
-      - delay: 15ms
-      - switch.turn_off: zRST_gpio
-  ## Full Restart
-  - platform: template
-    name: "Full (Core+Zigbee) Restart"
-    icon: mdi:toggle-switch
-    id: fullRST
-    turn_on_action:
-      - switch.turn_on: zRST_gpio
-      - delay: 15ms
-      - switch.turn_off: zRST_gpio
-      - delay: 15ms
-      - switch.turn_on: coreRestart
 
   ## Zigbee to flash mode switch
   - platform: gpio
     pin: 32
-    name: "Zigbee flash Mode internal"
+    name: "Zigbee Flash Mode Internal"
     icon: mdi:toggle-switch
     id: zBSL
     inverted: yes
@@ -221,16 +202,16 @@ switch:
     internal: true
 
   - platform: template
-    name: "Zigbee flash Mode"
+    name: "Zigbee Flash Mode"
     icon: mdi:cellphone-arrow-down
     turn_on_action:
       - script.execute: fw_update_mode
     turn_off_action:
-      - switch.toggle: zRST
+      - button.press: zRST
 
   ## Mode LAN/USB switch
   - platform: template
-    name: "DEVICE MODE SWITCH (LAN|OFF / USB|ON)"
+    name: "Device Mode (Off=LAN | On=USB)"
     id: modeSwitchTemplate
     turn_on_action:
       - switch.turn_on: gpio12LED1
@@ -246,7 +227,7 @@ switch:
           state: OFF
 
   - platform: gpio
-    name: "DEVICE MODE SWITCH (LAN|OFF / USB|ON)"
+    name: "Device Mode (Off=LAN | On=USB)"
     restore_mode: ALWAYS_OFF
     icon: mdi:toggle-switch
     internal: true
@@ -256,7 +237,7 @@ switch:
 
   ### LEDs swithces
   - platform: gpio
-    name: "LED - device mode (Blue)"
+    name: "LED - Device Mode (Blue)"
     restore_mode: ALWAYS_OFF
     icon: mdi:toggle-switch
     id: gpio12LED1
@@ -264,14 +245,37 @@ switch:
       number: GPIO12
 
   - platform: gpio
-    name: "LED - power (Yellow)"
+    name: "LED - Power (Yellow)"
     restore_mode: ALWAYS_ON
     icon: mdi:toggle-switch
     id: gpio14LED2
     pin:
       number: GPIO14
 
-# 8. SCRIPTS
+# 8. BUTTONS
+button:
+  ## Core Restart
+  - platform: restart
+    id: coreRestart
+    name: "Core Restart"
+  ## Zigbee Restart
+  - platform: template
+    id: zRST
+    name: "Zigbee Restart"
+    on_press:
+      - switch.turn_on: zRST_gpio
+      - delay: 15ms
+      - switch.turn_off: zRST_gpio
+  ## Full Restart
+  - platform: template
+    id: fullRST
+    name: "Core & Zigbee Restart"
+    on_press:
+      - button.press: zRST
+      - delay: 15ms
+      - button.press: coreRestart
+
+# 9. SCRIPTS
 script:
   - id: fw_update_mode
     then:

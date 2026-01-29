@@ -1,6 +1,6 @@
 esphome:
-  name: esp32-bluetooth-proxy
-  friendly_name: WiFi Bluetooth Proxy
+  name: generic-bluetooth-proxy
+  friendly_name: Generic Bluetooth Proxy
   min_version: 2025.8.0
   name_add_mac_suffix: true
 
@@ -24,9 +24,8 @@ captive_portal:
 logger:
 
 api:
-#  password: !secret api_password
-  encryption:
-    key: !secret api_encryption_key
+#  encryption:
+#    key: !secret api_encryption_key
 
 ota:
   - platform: esphome
@@ -34,11 +33,10 @@ ota:
     password: !secret ota_password
 
 esp32_ble_tracker:
-  scan_parameters:
-    # We currently use the defaults to ensure Bluetooth
-    # can co-exist with WiFi In the future we may be able to
-    # enable the built-in coexistence logic in ESP-IDF
-    active: true
+# The default scan parameters are recommended.
+# Aggressive scan settings (e.g., interval/window of 1100ms) typically
+# provide no benefit while increasing CPU usage and may cause
+# overheating.
 
 bluetooth_proxy:
   active: true
@@ -49,5 +47,9 @@ button:
     name: Safe Mode Boot
 
   - platform: factory_reset
-    id: factory_reset_btn
-    name: Factory reset
+    id: button_factory_reset
+    name: Factory Reset
+
+  - platform: restart
+    id: button_restart
+    name: Restart

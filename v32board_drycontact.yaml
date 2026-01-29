@@ -20,12 +20,15 @@ esphome:
   name: ${id_prefix}
   friendly_name: ${friendly_name}
   name_add_mac_suffix: true
+  min_version: 2025.12.0
   project:
-    name: ratgdo.esphome
+    name: ratgdo.v32board_drycontact
     version: "32.0"
 
 esp32:
   board: esp32dev
+  framework:
+    type: arduino
 
 dashboard_import:
   package_import_url: github://derek-miller/esphome-ratgdo/v32board_drycontact.yaml@main
@@ -41,7 +44,6 @@ packages:
 
 switch:
   - platform: ratgdo
-    ratgdo_id: ${id_prefix}
     id: ${id_prefix}_led
     type: led
     pin: GPIO2
@@ -60,14 +62,17 @@ time:
 
 api:
   id: api_server
-  password: !secret api_password
 #  encryption:
 #    key: !secret api_encryption_key
 
 improv_serial:
 
+esp32_improv:
+  authorizer: none
+
 wifi:
   ap:
+    ssid: "ratgdo"
   ssid: !secret wifi_ssid
   password: !secret wifi_password
 

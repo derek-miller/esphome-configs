@@ -1,2 +1,4 @@
 /.esphome/
 /secrets.yaml
+/devices.conf
+/devices.conf.new

@@ -1,0 +1,17 @@
+# ESPHome Devices Configuration
+# Format: Config file sections with IPs listed beneath
+#
+# [config-file.yaml]
+# 192.168.2.100
+# 192.168.2.101
+#
+# Run 'make discover' to find devices and auto-generate this file.
+#
+# Example:
+# [shelly-plus-1.yaml]
+# 192.168.2.197
+#
+# [shelly-1-mini-gen3.yaml]
+# 192.168.2.43
+# 192.168.2.44
+# 192.168.2.45

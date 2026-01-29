@@ -37,7 +37,6 @@ captive_portal:
 logger:
 
 api:
-  password: !secret api_password
 #  encryption:
 #    key: !secret api_encryption_key
 
@@ -45,16 +44,12 @@ ota:
   platform: esphome
   password: !secret ota_password
 
-output:
-  - platform: gpio
-    id: "relay_output"
-    pin: GPIO26
-
 switch:
-  - platform: output
+  - platform: gpio
     id: "relay"
     name: "Relay"
-    output: "relay_output"
+    pin: GPIO26
+    restore_mode: RESTORE_DEFAULT_OFF
 
 binary_sensor:
   - platform: gpio

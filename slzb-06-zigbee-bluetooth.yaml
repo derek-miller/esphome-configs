@@ -30,7 +30,6 @@ esp32:
 
 ## Connection to Home Assistant through API is enabled
 api:
-  password: !secret api_password
 #  encryption:
 #    key: !secret api_encryption_key
 

@@ -29,7 +29,6 @@ ethernet:
 logger:
 
 api:
-  password: !secret api_password
 #  encryption:
 #    key: !secret api_encryption_key
 
@@ -42,7 +41,7 @@ esp32_ble_tracker:
 # The default scan parameters are recommended.
 # Aggressive scan settings (e.g., interval/window of 1100ms) typically
 # provide no benefit while increasing CPU usage and may cause
-# overheating on some PoE-based proxies.
+# overheating.
 
 bluetooth_proxy:
   active: true

@@ -9,11 +9,11 @@ esp32:
   framework:
     type: esp-idf
 
-web_server:
-  local: true
-  auth:
-    username: !secret web_server_username
-    password: !secret web_server_password
+#web_server:
+#  local: true
+#  auth:
+#    username: !secret web_server_username
+#    password: !secret web_server_password
 
 wifi:
   ap:

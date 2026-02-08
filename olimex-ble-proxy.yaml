@@ -27,6 +27,7 @@ ethernet:
   power_pin: GPIO12
 
 logger:
+  level: DEBUG
 
 api:
 #  encryption:
@@ -36,6 +37,9 @@ ota:
   - platform: esphome
     id: ota_esphome
     password: !secret ota_password
+
+esp32_ble:
+  max_connections: 4
 
 esp32_ble_tracker:
 # The default scan parameters are recommended.
@@ -59,3 +63,198 @@ button:
   - platform: restart
     id: button_restart
     name: Restart
+
+  - platform: template
+    name: Advent Calendar On
+    id: button_advent_on
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100000001'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar Off
+    id: button_advent_off
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100000011'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar Reset
+    id: button_advent_reset
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100000101'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar Date Minus
+    id: button_advent_date_minus
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100000111'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar Date Plus
+    id: button_advent_date_plus
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100001001'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar Timer On
+    id: button_advent_timer_on
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100001101'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar Timer Off
+    id: button_advent_timer_off
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100001111'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar House Lights On
+    id: button_advent_house_lights_on
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100010011'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar House Lights Off
+    id: button_advent_house_lights_off
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100010101'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+# CC1101 Wiring (via UEXT 10-pin IDC breakout cable)
+#   CC1101 pin 1 (GND)  → UEXT pin 2  (GND)    → grey
+#   CC1101 pin 2 (VCC)  → UEXT pin 1  (3.3V)   → purple
+#   CC1101 pin 3 (GDO0) → UEXT pin 3  (GPIO4)  → blue    (TX)
+#   CC1101 pin 4 (CSN)  → UEXT pin 10 (GPIO5)  → white
+#   CC1101 pin 5 (SCK)  → UEXT pin 9  (GPIO14) → black
+#   CC1101 pin 6 (MOSI) → UEXT pin 8  (GPIO2)  → brown
+#   CC1101 pin 7 (MISO) → UEXT pin 7  (GPIO15) → red
+#   CC1101 pin 8 (GDO2) → UEXT pin 4  (GPIO36) → green   (RX)
+
+# SPI bus for CC1101
+spi:
+  clk_pin: GPIO14
+  mosi_pin: GPIO2
+  miso_pin: GPIO15
+
+# CC1101 RF
+cc1101:
+  id: my_cc1101
+  cs_pin: GPIO5
+  frequency: 433.92MHz
+  modulation_type: ASK/OOK
+
+number:
+  - platform: template
+    name: "CC1101 Frequency"
+    id: cc1101_frequency
+    unit_of_measurement: "MHz"
+    min_value: 300
+    max_value: 928
+    step: 0.001
+    initial_value: 433.92
+    restore_value: true
+    optimistic: true
+    mode: box
+    on_value:
+      then:
+        - lambda: 'id(my_cc1101).set_frequency(x * 1000000);'
+        - cc1101.begin_rx
+        - logger.log:
+            format: "CC1101 frequency set to %.3f MHz"
+            args: ['x']
+
+# RF Transmitter (CC1101 GDO0)
+remote_transmitter:
+  id: rf_tx
+  pin: GPIO4
+  carrier_duty_percent: 100%
+  non_blocking: false
+  on_transmit:
+    then:
+      - cc1101.begin_tx
+  on_complete:
+    then:
+      # Restore frequency after transmission
+      - lambda: 'id(my_cc1101).set_frequency(id(cc1101_frequency).state * 1000000);'
+      - cc1101.begin_rx
+
+# RF Receiver (CC1101 GDO2)
+remote_receiver:
+  id: rf_rx
+  pin:
+    number: GPIO36
+    inverted: true
+  dump: all
+  tolerance: 50%
+  filter: 250us
+  idle: 4ms

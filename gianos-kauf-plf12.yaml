@@ -1,0 +1,7 @@
+packages:
+  kauf.plf12: github://KaufHA/PLF12/kauf-plf12.yaml
+
+wifi:
+  ssid: !secret gianos_iot_wifi_ssid
+  password: !secret gianos_iot_wifi_password
+  min_auth_mode: WPA2

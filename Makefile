@@ -7,6 +7,7 @@
 #   make logs IP=192.168.2.x   - View logs from device
 #   make run-all               - Run against all configured devices
 #   make run-config CONFIG=x.yaml - Run against all devices for a config
+#   make run-base BASE=x.yaml    - Run all configs that include a base file
 #
 # Config format (devices.conf):
 #   [config-file.yaml]
@@ -17,7 +18,7 @@ SHELL := /bin/bash
 CONFIG_FILE := devices.conf
 SCRIPTS_DIR := scripts
 
-.PHONY: help discover list run upload logs validate compile run-all run-config logs-config validate-all clean
+.PHONY: help discover list run upload logs validate compile run-all run-config run-base logs-config validate-all clean
 
 help:
 	@echo "ESPHome Device Management"
@@ -35,6 +36,7 @@ help:
 	@echo "  make list                  - List all configured devices"
 	@echo "  make run-all               - Run against all configured devices"
 	@echo "  make run-config CONFIG=x.yaml   - Run on all devices for a config"
+	@echo "  make run-base BASE=x.yaml       - Run all configs that include a base file"
 	@echo "  make logs-config CONFIG=x.yaml  - Stream logs from all devices for a config"
 	@echo "  make validate-all          - Validate all device configs"
 
@@ -132,6 +134,10 @@ run-all: check-config
 		/^\[.*\]$$/ { config = substr($$0, 2, length($$0)-2) } \
 		/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/ { print config ":" $$1 }' $(CONFIG_FILE) | \
 	while IFS=: read -r config ip; do \
+		if ! ping -c1 -W1 "$$ip" >/dev/null 2>&1; then \
+			echo "=== $$config -> $$ip === SKIPPED (unreachable)"; \
+			continue; \
+		fi; \
 		echo "=== $$config -> $$ip ==="; \
 		esphome run --no-logs "$$config" --device "$$ip"; \
 		echo ""; \
@@ -161,12 +167,49 @@ endif
 	else \
 		echo "Found devices for $(CONFIG): $(IPS)"; \
 		for ip in $(IPS); do \
+			if ! ping -c1 -W1 $$ip >/dev/null 2>&1; then \
+				echo ""; \
+				echo "=== $(CONFIG) -> $$ip === SKIPPED (unreachable)"; \
+				continue; \
+			fi; \
 			echo ""; \
 			echo "=== $(CONFIG) -> $$ip ==="; \
 			esphome run --no-logs $(CONFIG) --device $$ip; \
 		done; \
 		echo ""; \
 		echo "All devices updated!"; \
+	fi
+
+run-base: check-config
+ifndef BASE
+	$(error BASE is required. Usage: make run-base BASE=olimex-ble-proxy.yaml)
+endif
+	@if [ ! -f "$(BASE)" ]; then \
+		echo "Error: Base file '$(BASE)' not found"; \
+		exit 1; \
+	fi
+	@echo "Finding configs that include $(BASE)..."
+	@set -e; \
+	found=0; \
+	for yaml in $$(grep -l '!include $(BASE)' *.yaml 2>/dev/null); do \
+		found=1; \
+		echo ""; \
+		echo "--- $$yaml includes $(BASE) ---"; \
+		$(MAKE) --no-print-directory run-config CONFIG=$$yaml; \
+	done; \
+	if [ "$$found" -eq 0 ]; then \
+		echo "No configs include $(BASE), running it directly..."; \
+		$(MAKE) --no-print-directory run-config CONFIG=$(BASE); \
+	else \
+		base_ips=$$(awk -v cfg="$(BASE)" ' \
+			/^\[.*\]$$/ { in_section = (substr($$0, 2, length($$0)-2) == cfg) } \
+			in_section && /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/ { found=1 } \
+			END { print found+0 }' $(CONFIG_FILE)); \
+		if [ "$$base_ips" -eq 1 ]; then \
+			echo ""; \
+			echo "Also running base directly..."; \
+			$(MAKE) --no-print-directory run-config CONFIG=$(BASE); \
+		fi; \
 	fi
 
 logs-config: check-config

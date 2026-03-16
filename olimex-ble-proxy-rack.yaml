@@ -1,0 +1,646 @@
+packages:
+  base: !include olimex-ble-proxy.yaml
+
+esphome:
+  build_path: build/olimex-bluetooth-proxy-rack
+
+button:
+  - platform: template
+    name: Back Porch Fan Off
+    internal: true
+    id: button_bp_fan_off
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(303798000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '010100000111111000100000'
+          protocol:
+            pulse_length: 384
+            sync: [36, 1]
+            zero: [1, 2]
+            one: [2, 1]
+            inverted: true
+          repeat:
+            times: 20
+            wait_time: 0s
+
+  - platform: template
+    name: Back Porch Fan Speed 1
+    internal: true
+    id: button_bp_fan_speed1
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(303798000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '010100000111111011000000'
+          protocol:
+            pulse_length: 384
+            sync: [36, 1]
+            zero: [1, 2]
+            one: [2, 1]
+            inverted: true
+          repeat:
+            times: 20
+            wait_time: 0s
+
+  - platform: template
+    name: Back Porch Fan Speed 2
+    internal: true
+    id: button_bp_fan_speed2
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(303798000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '010100000111111010011000'
+          protocol:
+            pulse_length: 384
+            sync: [36, 1]
+            zero: [1, 2]
+            one: [2, 1]
+            inverted: true
+          repeat:
+            times: 20
+            wait_time: 0s
+
+  - platform: template
+    name: Back Porch Fan Speed 3
+    internal: true
+    id: button_bp_fan_speed3
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(303798000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '010100000111111001000000'
+          protocol:
+            pulse_length: 384
+            sync: [36, 1]
+            zero: [1, 2]
+            one: [2, 1]
+            inverted: true
+          repeat:
+            times: 20
+            wait_time: 0s
+
+  - platform: template
+    name: Back Porch Fan Speed 4
+    internal: true
+    id: button_bp_fan_speed4
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(303798000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '010100000111111001010000'
+          protocol:
+            pulse_length: 384
+            sync: [36, 1]
+            zero: [1, 2]
+            one: [2, 1]
+            inverted: true
+          repeat:
+            times: 20
+            wait_time: 0s
+
+  - platform: template
+    name: Back Porch Fan Speed 5
+    internal: true
+    id: button_bp_fan_speed5
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(303798000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '010100000111111010010100'
+          protocol:
+            pulse_length: 384
+            sync: [36, 1]
+            zero: [1, 2]
+            one: [2, 1]
+            inverted: true
+          repeat:
+            times: 20
+            wait_time: 0s
+
+  - platform: template
+    name: Back Porch Fan Speed 6
+    internal: true
+    id: button_bp_fan_speed6
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(303798000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '010100000111111010000000'
+          protocol:
+            pulse_length: 384
+            sync: [36, 1]
+            zero: [1, 2]
+            one: [2, 1]
+            inverted: true
+          repeat:
+            times: 20
+            wait_time: 0s
+
+  - platform: template
+    name: Back Porch Fan Reverse
+    internal: true
+    id: button_bp_fan_reverse
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(303798000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '010100000111111011010000'
+          protocol:
+            pulse_length: 384
+            sync: [36, 1]
+            zero: [1, 2]
+            one: [2, 1]
+            inverted: true
+          repeat:
+            times: 20
+            wait_time: 0s
+
+  - platform: template
+    name: Bedroom 2 Fan Off
+    internal: true
+    id: button_br2_fan_off
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(303798000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '001010000111000100100000'
+          protocol:
+            pulse_length: 350
+            sync: [36, 1]
+            zero: [1, 2]
+            one: [2, 1]
+            inverted: true
+          repeat:
+            times: 20
+            wait_time: 0s
+
+  - platform: template
+    name: Bedroom 2 Fan Speed 1
+    internal: true
+    id: button_br2_fan_speed1
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(303798000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '001010000111000111000000'
+          protocol:
+            pulse_length: 350
+            sync: [36, 1]
+            zero: [1, 2]
+            one: [2, 1]
+            inverted: true
+          repeat:
+            times: 20
+            wait_time: 0s
+
+  - platform: template
+    name: Bedroom 2 Fan Speed 2
+    internal: true
+    id: button_br2_fan_speed2
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(303798000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '001010000111000110011000'
+          protocol:
+            pulse_length: 350
+            sync: [36, 1]
+            zero: [1, 2]
+            one: [2, 1]
+            inverted: true
+          repeat:
+            times: 20
+            wait_time: 0s
+
+  - platform: template
+    name: Bedroom 2 Fan Speed 3
+    internal: true
+    id: button_br2_fan_speed3
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(303798000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '001010000111000101000000'
+          protocol:
+            pulse_length: 350
+            sync: [36, 1]
+            zero: [1, 2]
+            one: [2, 1]
+            inverted: true
+          repeat:
+            times: 20
+            wait_time: 0s
+
+  - platform: template
+    name: Bedroom 2 Fan Speed 4
+    internal: true
+    id: button_br2_fan_speed4
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(303798000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '001010000111000101010000'
+          protocol:
+            pulse_length: 350
+            sync: [36, 1]
+            zero: [1, 2]
+            one: [2, 1]
+            inverted: true
+          repeat:
+            times: 20
+            wait_time: 0s
+
+  - platform: template
+    name: Bedroom 2 Fan Speed 5
+    internal: true
+    id: button_br2_fan_speed5
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(303798000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '001010000111000110010100'
+          protocol:
+            pulse_length: 350
+            sync: [36, 1]
+            zero: [1, 2]
+            one: [2, 1]
+            inverted: true
+          repeat:
+            times: 20
+            wait_time: 0s
+
+  - platform: template
+    name: Bedroom 2 Fan Speed 6
+    internal: true
+    id: button_br2_fan_speed6
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(303798000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '001010000111000110000000'
+          protocol:
+            pulse_length: 350
+            sync: [36, 1]
+            zero: [1, 2]
+            one: [2, 1]
+            inverted: true
+          repeat:
+            times: 20
+            wait_time: 0s
+
+  - platform: template
+    name: Bedroom 2 Fan Reverse
+    internal: true
+    id: button_br2_fan_reverse
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(303798000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '001010000111000111010000'
+          protocol:
+            pulse_length: 350
+            sync: [36, 1]
+            zero: [1, 2]
+            one: [2, 1]
+            inverted: true
+          repeat:
+            times: 20
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar On
+    internal: true
+    id: button_advent_on
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100000001'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar Off
+    internal: true
+    id: button_advent_off
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100000011'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar Reset
+    id: button_advent_reset
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100000101'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar Date Minus
+    id: button_advent_date_minus
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100000111'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar Date Plus
+    id: button_advent_date_plus
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100001001'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar Timer On
+    internal: true
+    id: button_advent_timer_on
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100001101'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar Timer Off
+    internal: true
+    id: button_advent_timer_off
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100001111'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar House Lights On
+    internal: true
+    id: button_advent_house_lights_on
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100010011'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Advent Calendar House Lights Off
+    internal: true
+    id: button_advent_house_lights_off
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(433920000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_rc_switch_raw:
+          transmitter_id: rf_tx
+          code: '111111111111111100010101'
+          protocol: 1
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Christmas Tree On
+    internal: true
+    id: button_christmas_tree_on
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(434010000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_raw:
+          transmitter_id: rf_tx
+          # Data: 0x55AA2AD5 (pulse-distance: mark=1050us, 0=975us space, 1=2025us space)
+          code: [1050, -975, 1050, -2025, 1050, -975, 1050, -2025,
+                 1050, -975, 1050, -2025, 1050, -975, 1050, -2025,
+                 1050, -2025, 1050, -975, 1050, -2025, 1050, -975,
+                 1050, -2025, 1050, -975, 1050, -2025, 1050, -975,
+                 1050, -975, 1050, -975, 1050, -2025, 1050, -975,
+                 1050, -2025, 1050, -975, 1050, -2025, 1050, -975,
+                 1050, -2025, 1050, -2025, 1050, -975, 1050, -2025,
+                 1050, -975, 1050, -2025, 1050, -975, 1050, -2025,
+                 1050, -4025]
+          repeat:
+            times: 5
+            wait_time: 0s
+
+  - platform: template
+    name: Christmas Tree Off
+    internal: true
+    id: button_christmas_tree_off
+    on_press:
+      - lambda: 'id(my_cc1101).set_frequency(434010000);'
+      - delay: 5ms
+      - remote_transmitter.transmit_raw:
+          transmitter_id: rf_tx
+          # Data: 0x55AA2BD4 (pulse-distance: mark=1050us, 0=975us space, 1=2025us space)
+          code: [1050, -975, 1050, -2025, 1050, -975, 1050, -2025,
+                 1050, -975, 1050, -2025, 1050, -975, 1050, -2025,
+                 1050, -2025, 1050, -975, 1050, -2025, 1050, -975,
+                 1050, -2025, 1050, -975, 1050, -2025, 1050, -975,
+                 1050, -975, 1050, -975, 1050, -2025, 1050, -975,
+                 1050, -2025, 1050, -975, 1050, -2025, 1050, -2025,
+                 1050, -2025, 1050, -2025, 1050, -975, 1050, -2025,
+                 1050, -975, 1050, -2025, 1050, -975, 1050, -975,
+                 1050, -4025]
+          repeat:
+            times: 5
+            wait_time: 0s
+
+script:
+  - id: send_bp_fan_state
+    then:
+      - lambda: |-
+          if (id(bp_fan).state) {
+            int speed = id(bp_fan).speed;
+            if (speed <= 0) speed = 1;
+            if (speed > 6) speed = 6;
+            switch (speed) {
+              case 1: id(button_bp_fan_speed1).press(); break;
+              case 2: id(button_bp_fan_speed2).press(); break;
+              case 3: id(button_bp_fan_speed3).press(); break;
+              case 4: id(button_bp_fan_speed4).press(); break;
+              case 5: id(button_bp_fan_speed5).press(); break;
+              case 6: id(button_bp_fan_speed6).press(); break;
+            }
+          } else {
+            id(button_bp_fan_off).press();
+          }
+
+  - id: send_br2_fan_state
+    then:
+      - lambda: |-
+          if (id(br2_fan).state) {
+            int speed = id(br2_fan).speed;
+            if (speed <= 0) speed = 1;
+            if (speed > 6) speed = 6;
+            switch (speed) {
+              case 1: id(button_br2_fan_speed1).press(); break;
+              case 2: id(button_br2_fan_speed2).press(); break;
+              case 3: id(button_br2_fan_speed3).press(); break;
+              case 4: id(button_br2_fan_speed4).press(); break;
+              case 5: id(button_br2_fan_speed5).press(); break;
+              case 6: id(button_br2_fan_speed6).press(); break;
+            }
+          } else {
+            id(button_br2_fan_off).press();
+          }
+
+fan:
+  - platform: template
+    name: Back Porch Fan
+    id: bp_fan
+    speed_count: 6
+    has_direction: true
+    restore_mode: ALWAYS_OFF
+    on_turn_on:
+      - script.execute: send_bp_fan_state
+    on_turn_off:
+      - script.execute: send_bp_fan_state
+    on_speed_set:
+      - lambda: |-
+          auto call = id(bp_fan).turn_on();
+          call.perform();
+    on_direction_set:
+      - button.press: button_bp_fan_reverse
+
+  - platform: template
+    name: Bedroom 2 Fan
+    id: br2_fan
+    speed_count: 6
+    has_direction: true
+    restore_mode: ALWAYS_OFF
+    on_turn_on:
+      - script.execute: send_br2_fan_state
+    on_turn_off:
+      - script.execute: send_br2_fan_state
+    on_speed_set:
+      - lambda: |-
+          auto call = id(br2_fan).turn_on();
+          call.perform();
+    on_direction_set:
+      - button.press: button_br2_fan_reverse
+
+switch:
+  - platform: template
+    name: Advent Calendar House Lights
+    id: switch_advent_house_lights
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    turn_on_action:
+      - button.press: button_advent_house_lights_on
+    turn_off_action:
+      - button.press: button_advent_house_lights_off
+
+  - platform: template
+    name: Advent Calendar
+    id: switch_advent_calendar
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    turn_on_action:
+      - button.press: button_advent_on
+    turn_off_action:
+      - button.press: button_advent_off
+
+  - platform: template
+    name: Advent Calendar Timer
+    id: switch_advent_timer
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    turn_on_action:
+      - button.press: button_advent_timer_on
+    turn_off_action:
+      - button.press: button_advent_timer_off
+
+  - platform: template
+    name: Christmas Tree
+    id: switch_christmas_tree
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    turn_on_action:
+      - button.press: button_christmas_tree_on
+    turn_off_action:
+      - button.press: button_christmas_tree_off
+
+  - platform: template
+    name: Back Porch Fan Repeat
+    id: switch_bp_fan_repeat
+    optimistic: true
+    restore_mode: ALWAYS_ON
+
+  - platform: template
+    name: Bedroom 2 Fan Repeat
+    id: switch_br2_fan_repeat
+    optimistic: true
+    restore_mode: ALWAYS_ON
+
+interval:
+  - interval: 10s
+    then:
+      - if:
+          condition:
+            switch.is_on: switch_bp_fan_repeat
+          then:
+            - script.execute: send_bp_fan_state
+      - delay: 2s
+      - if:
+          condition:
+            switch.is_on: switch_br2_fan_repeat
+          then:
+            - script.execute: send_br2_fan_state

@@ -1,0 +1,66 @@
+packages:
+  base: !include olimex-ble-proxy.yaml
+
+esphome:
+  build_path: build/olimex-bluetooth-proxy-office
+
+button:
+  - platform: template
+    name: Heater Power
+    id: button_heater_power
+    on_press:
+      - remote_transmitter.transmit_symphony:
+          transmitter_id: ir_tx
+          data: 0xD84
+          nbits: 12
+          repeat:
+            times: 2
+            wait_time: 0s
+
+  - platform: template
+    name: Heater Mode
+    id: button_heater_mode
+    on_press:
+      - remote_transmitter.transmit_symphony:
+          transmitter_id: ir_tx
+          data: 0xD88
+          nbits: 12
+          repeat:
+            times: 2
+            wait_time: 0s
+
+  - platform: template
+    name: Heater Temp Up
+    id: button_heater_temp_up
+    on_press:
+      - remote_transmitter.transmit_symphony:
+          transmitter_id: ir_tx
+          data: 0xD82
+          nbits: 12
+          repeat:
+            times: 2
+            wait_time: 0s
+
+  - platform: template
+    name: Heater Temp Down
+    id: button_heater_temp_down
+    on_press:
+      - remote_transmitter.transmit_symphony:
+          transmitter_id: ir_tx
+          data: 0xD90
+          nbits: 12
+          repeat:
+            times: 2
+            wait_time: 0s
+
+  - platform: template
+    name: Heater Oscillate
+    id: button_heater_oscillate
+    on_press:
+      - remote_transmitter.transmit_symphony:
+          transmitter_id: ir_tx
+          data: 0xD81
+          nbits: 12
+          repeat:
+            times: 2
+            wait_time: 0s

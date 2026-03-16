@@ -8,6 +8,8 @@ esp32:
   variant: esp32
   framework:
     type: esp-idf
+    sdkconfig_options:
+      CONFIG_BTDM_SCAN_DUPL_TYPE_DATA_DEVICE: y
 
 #web_server:
 #  local: true

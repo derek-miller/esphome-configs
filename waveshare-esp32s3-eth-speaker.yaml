@@ -1,0 +1,115 @@
+esphome:
+  name: waveshare-esp32s3-eth-speaker
+  friendly_name: Waveshare ESP32-S3-ETH Speaker
+  min_version: 2025.8.0
+  name_add_mac_suffix: true
+
+esp32:
+  board: esp32-s3-devkitc-1
+  variant: esp32s3
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    version: recommended
+    sdkconfig_options:
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+# Wired ethernet via W5500 (SPI)
+ethernet:
+  type: W5500
+  clk_pin: GPIO13
+  mosi_pin: GPIO11
+  miso_pin: GPIO12
+  cs_pin: GPIO14
+  interrupt_pin: GPIO10
+  reset_pin: GPIO9
+
+logger:
+  level: DEBUG
+
+api:
+#  encryption:
+#    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    id: ota_esphome
+    password: !secret ota_password
+
+web_server:
+  local: true
+  auth:
+    username: !secret web_server_username
+    password: !secret web_server_password
+
+# I2S bus (shared between speaker and mic)
+#
+# MAX98357A Wiring:
+#   BCLK -> GPIO16 (header pin 32)
+#   LRC  -> GPIO17 (header pin 34)
+#   DIN  -> GPIO33 (header pin 20)
+#   VIN  -> 3.3V or 5V (5V = louder)
+#   GND  -> GND
+#   GAIN -> unconnected (default 9dB)
+#   SD   -> unconnected (internal pull-up keeps enabled)
+#
+# INMP441 Wiring:
+#   SCK  -> GPIO16 (header pin 32)
+#   WS   -> GPIO17 (header pin 34)
+#   SD   -> GPIO34 (header pin 19)
+#   VDD  -> 3.3V
+#   GND  -> GND
+#   L/R  -> GND (left channel)
+i2s_audio:
+  i2s_lrclk_pin: GPIO17
+  i2s_bclk_pin: GPIO16
+
+# Speaker output (MAX98357A I2S DAC)
+speaker:
+  - platform: i2s_audio
+    id: i2s_speaker
+    dac_type: external
+    i2s_dout_pin: GPIO33
+    channel: mono
+    sample_rate: 16000
+
+# Microphone input (INMP441 I2S MEMS)
+microphone:
+  - platform: i2s_audio
+    id: i2s_mic
+    adc_type: external
+    i2s_din_pin: GPIO34
+    channel: left
+    sample_rate: 16000
+    bits_per_sample: 32bit
+
+# Voice assistant (requires HA with Assist pipeline configured)
+# voice_assistant:
+#   microphone: i2s_mic
+#   speaker: i2s_speaker
+#   use_wake_word: true
+#   noise_suppression_level: 2
+#   auto_gain: 31dBFS
+#   volume_multiplier: 2.0
+
+# On-device wake word (optional, uses PSRAM)
+# micro_wake_word:
+#   models:
+#     - model: okay_nabu
+
+button:
+  - platform: safe_mode
+    id: button_safe_mode
+    name: Safe Mode Boot
+
+  - platform: factory_reset
+    id: button_factory_reset
+    name: Factory Reset
+
+  - platform: restart
+    id: button_restart
+    name: Restart

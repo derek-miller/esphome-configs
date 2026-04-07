@@ -95,6 +95,49 @@ microphone:
     sample_rate: 16000
     bits_per_sample: 32bit
 
+# OV5640 camera (onboard DVP connector)
+#
+# Camera DVP Wiring (directly on board connector):
+#   VSYNC -> GPIO1
+#   HREF  -> GPIO2
+#   XCLK  -> GPIO3
+#   PCLK  -> GPIO39
+#   SIOD  -> GPIO48 (I2C SDA)
+#   SIOC  -> GPIO47 (I2C SCL)
+#   D7    -> GPIO18
+#   D6    -> GPIO15
+#   D5    -> GPIO38
+#   D4    -> GPIO40
+#   D3    -> GPIO42
+#   D2    -> GPIO46
+#   D1    -> GPIO45
+#   D0    -> GPIO41
+esp32_camera:
+  id: ov5640_cam
+  name: Camera
+  external_clock:
+    pin: GPIO3
+    frequency: 20MHz
+  i2c_pins:
+    sda: GPIO48
+    scl: GPIO47
+  data_pins:
+    - GPIO41  # D0
+    - GPIO45  # D1
+    - GPIO46  # D2
+    - GPIO42  # D3
+    - GPIO40  # D4
+    - GPIO38  # D5
+    - GPIO15  # D6
+    - GPIO18  # D7
+  vsync_pin: GPIO1
+  href_pin: GPIO2
+  pixel_clock_pin: GPIO39
+  resolution: 800x600
+  jpeg_quality: 12
+  idle_framerate: 0.2fps
+  max_framerate: 15fps
+
 # Voice assistant (requires HA with Assist pipeline configured)
 # Uncomment to enable -- uses the same speaker and mic defined above.
 # voice_assistant:

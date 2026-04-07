@@ -68,14 +68,14 @@ i2s_audio:
   i2s_lrclk_pin: GPIO17
   i2s_bclk_pin: GPIO16
 
-# Speaker output (MAX98357A I2S DAC)
-speaker:
+# Media player (exposes speaker to HA for TTS and audio streaming)
+media_player:
   - platform: i2s_audio
-    id: i2s_speaker
+    id: i2s_media_player
+    name: Speaker
     dac_type: external
     i2s_dout_pin: GPIO33
-    channel: mono
-    sample_rate: 16000
+    mode: mono
 
 # Microphone input (INMP441 I2S MEMS)
 microphone:
@@ -88,6 +88,15 @@ microphone:
     bits_per_sample: 32bit
 
 # Voice assistant (requires HA with Assist pipeline configured)
+# NOTE: When enabling voice_assistant, replace media_player above with
+# a speaker component (they share GPIO33 and can't both be active):
+#   speaker:
+#     - platform: i2s_audio
+#       id: i2s_speaker
+#       dac_type: external
+#       i2s_dout_pin: GPIO33
+#       channel: mono
+#       sample_rate: 16000
 # voice_assistant:
 #   microphone: i2s_mic
 #   speaker: i2s_speaker

@@ -1,0 +1,557 @@
+---
+# =============================================================================
+# AUXX ceiling lift on a ratgdo32 (v3.2 / ESP32) board, dry-contact wiring.
+#
+# STANDALONE FILE: no `ratgdo:` component, no `!include base_drycontact.yaml`,
+# no external_components. This file no longer depends on the
+# derek-miller/esphome-ratgdo fork. Once all ratgdo32 lifts are migrated to
+# this pattern, that fork and base_drycontact.yaml can be retired.
+#
+# Cover orientation:
+#   | Cover state | Position | Lift physical state                  |
+#   |-------------|----------|--------------------------------------|
+#   | closed      | 0.0      | fully UP at ceiling, top reed engaged|
+#   | opening     | 0.0->1.0 | descending                           |
+#   | open        | 1.0      | fully DOWN at loading height         |
+#   | closing     | 1.0->0.0 | ascending                            |
+# "Open the storage to access it, close the storage to stow it."
+#
+# Position estimation is TIME-BASED. The single top-of-travel reed switch is
+# the only ground truth: it snaps position to 0.0 on contact, resyncing drift
+# on every full up-cycle. open_duration/close_duration are LIVE-TUNABLE via
+# `number` entities (the stock `feedback`/`time_based` cover platforms only
+# accept compile-time durations, so this is a custom `template` cover).
+#
+# The AUXX motor has its own physical end limits, so a soft position estimate
+# being slightly off is never dangerous: a "down" pulse travels to the preset
+# loading height and stops itself; an "up" pulse travels to the top and stops
+# itself, with the reed confirming.
+#
+# CALIBRATION (web UI / HA, "Calibration" group):
+#   Each direction is a single toggle button that only works from the correct
+#   end position and starts the move + timer together for accuracy:
+#     * "Calibrate descent" — only from fully UP (reed engaged). Press once to
+#       lower + start timing; press again at the bottom to stop and write the
+#       elapsed time straight into "Open (descend) duration".
+#     * "Calibrate ascent" — only from fully DOWN. Press once to raise + start
+#       timing; press again at the top to stop and write the elapsed time into
+#       "Close (ascend) duration".
+#   Recommended order from fully up: descent first (leaves the lift down), then
+#   ascent (returns it up). Durations persist across reboots (restore_value).
+#
+# KNOWN LIMITATION: moves made from the physical AUXX wall button or handheld
+# remote are not seen by ESPHome. The top reed catches any return to the parked
+# up position (snaps to 0.0); mid-travel manual moves stay untracked until the
+# next up-stroke resyncs.
+#
+# BENCH-CHECK TODOs before relying on a lift (see substitutions + comments):
+#   * discrete_stop_pin = GPIO17 ("Red CTRL"/door-control terminal, confirmed
+#     from the fork pin map). Flip to GPIO21 if the stop pulse doesn't register.
+#   * AUXX command outputs assume turn_on = momentary contact closed. If the
+#     AUXX triggers on release or the contacts are normally-closed, set
+#     `inverted: true` on the cmd_* switches.
+#   * Reed assumed normally-open / active-low (inverted: true). Confirm.
+#   * Calibrate the durations with the buttons above (defaults are placeholders).
+# =============================================================================
+
+substitutions:
+  device_name: auxx-lift     # mDNS hostname base (hyphens, no underscores)
+  id_prefix: auxx_lift       # C++ entity-id prefix (underscores, no hyphens)
+  friendly_name: "AUXX Lift"
+  # --- Pin map: ratgdo32 v3.2, dry-contact wiring ----------------------------
+  discrete_open_pin: GPIO26     # AUXX "down" (descend)  -> cover open_action
+  discrete_close_pin: GPIO25    # AUXX "up" (ascend)     -> cover close_action
+  discrete_stop_pin: GPIO17     # AUXX "stop" -> "Red CTRL"/door-control terminal
+                                #   (UART-TX side). Flip to GPIO21 (UART RX) if
+                                #   the stop pulse doesn't register on the bench.
+  dry_contact_close_pin: GPIO14 # top-of-travel reed -> close endstop (pos 0.0)
+  led_pin: GPIO2                # onboard status LED
+  pulse_length: 500ms           # momentary press length for AUXX inputs
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: true
+  min_version: 2025.12.0
+  on_boot:
+    # Boot behavior: NO auto-home. Position is restored from flash
+    # (last known) and stays put until the next up-command resyncs via the reed.
+    priority: -100
+    then:
+      - lambda: |-
+          id(${id_prefix}_dir) = 0;
+          id(${id_prefix}_cal_mode) = 0;
+          id(${id_prefix}_cover).position = id(${id_prefix}_position);
+          id(${id_prefix}_cover).current_operation = cover::COVER_OPERATION_IDLE;
+          id(${id_prefix}_cover).publish_state();
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+web_server:
+  version: 3
+  local: true
+  auth:
+    username: !secret web_server_username
+    password: !secret web_server_password
+  sorting_groups:
+    - id: grp_lift
+      name: "Lift control"
+      sorting_weight: 10
+    - id: grp_calibration
+      name: "Calibration"
+      sorting_weight: 20
+    - id: grp_diagnostic
+      name: "Diagnostics"
+      sorting_weight: 30
+
+wifi:
+  ap:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  min_auth_mode: WPA2
+
+captive_portal:
+
+improv_serial:
+
+esp32_improv:
+  authorizer: none
+
+logger:
+
+api:
+  id: api_server
+#  encryption:
+#    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+    id: ${id_prefix}_ota
+  - platform: web_server
+    id: ${id_prefix}_ota_ws
+
+safe_mode:
+
+preferences:
+  flash_write_interval: 1min
+
+# Sync time with Home Assistant.
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+# -----------------------------------------------------------------------------
+# Persisted / runtime state
+# -----------------------------------------------------------------------------
+globals:
+  # Current estimated position, 0.0 = closed (fully up) .. 1.0 = open (fully down).
+  - id: ${id_prefix}_position
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+  # Target position the current move is driving toward.
+  - id: ${id_prefix}_target
+    type: float
+    restore_value: false
+    initial_value: '0.0'
+  # Direction of travel: +1 opening (descending), -1 closing (ascending), 0 idle.
+  - id: ${id_prefix}_dir
+    type: int
+    restore_value: false
+    initial_value: '0'
+  # Calibration mode: 0 idle, 1 descent timing, 2 ascent timing.
+  - id: ${id_prefix}_cal_mode
+    type: int
+    restore_value: false
+    initial_value: '0'
+  # millis() captured when a calibration run was started.
+  - id: ${id_prefix}_cal_start_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+
+# -----------------------------------------------------------------------------
+# Live-tunable travel durations. The calibration buttons write here directly.
+# step 0.1 preserves the measured precision; restore_value persists them.
+# -----------------------------------------------------------------------------
+number:
+  - platform: template
+    id: ${id_prefix}_open_duration
+    name: "Open (descend) duration"
+    icon: mdi:arrow-down-bold
+    optimistic: true
+    restore_value: true
+    initial_value: 30      # TODO: calibrate via "Calibrate descent"
+    min_value: 1
+    max_value: 180
+    step: 0.1
+    unit_of_measurement: s
+    mode: box
+    entity_category: config
+    web_server:
+      sorting_group_id: grp_calibration
+      sorting_weight: 10
+  - platform: template
+    id: ${id_prefix}_close_duration
+    name: "Close (ascend) duration"
+    icon: mdi:arrow-up-bold
+    optimistic: true
+    restore_value: true
+    initial_value: 30      # TODO: calibrate via "Calibrate ascent"
+    min_value: 1
+    max_value: 180
+    step: 0.1
+    unit_of_measurement: s
+    mode: box
+    entity_category: config
+    web_server:
+      sorting_group_id: grp_calibration
+      sorting_weight: 20
+
+# -----------------------------------------------------------------------------
+# AUXX momentary command outputs + onboard LED
+# The command outputs are pulsed by cover actions and calibration buttons, never
+# toggled by the user, so they are internal and always start off.
+# -----------------------------------------------------------------------------
+switch:
+  - platform: gpio
+    id: ${id_prefix}_cmd_down
+    pin: ${discrete_open_pin}
+    restore_mode: ALWAYS_OFF
+    internal: true
+  - platform: gpio
+    id: ${id_prefix}_cmd_up
+    pin: ${discrete_close_pin}
+    restore_mode: ALWAYS_OFF
+    internal: true
+  - platform: gpio
+    id: ${id_prefix}_cmd_stop
+    pin: ${discrete_stop_pin}
+    restore_mode: ALWAYS_OFF
+    internal: true
+  - platform: gpio
+    id: ${id_prefix}_led
+    pin:
+      number: ${led_pin}
+      ignore_strapping_warning: true   # GPIO2 is a strapping pin
+    name: "LED"
+    entity_category: config
+    web_server:
+      sorting_group_id: grp_diagnostic
+      sorting_weight: 20
+
+# -----------------------------------------------------------------------------
+# Momentary-pulse helpers (callable from actions and lambdas)
+# -----------------------------------------------------------------------------
+script:
+  - id: ${id_prefix}_pulse_down
+    then:
+      - switch.turn_on: ${id_prefix}_cmd_down
+      - delay: ${pulse_length}
+      - switch.turn_off: ${id_prefix}_cmd_down
+  - id: ${id_prefix}_pulse_up
+    then:
+      - switch.turn_on: ${id_prefix}_cmd_up
+      - delay: ${pulse_length}
+      - switch.turn_off: ${id_prefix}_cmd_up
+  - id: ${id_prefix}_pulse_stop
+    then:
+      - switch.turn_on: ${id_prefix}_cmd_stop
+      - delay: ${pulse_length}
+      - switch.turn_off: ${id_prefix}_cmd_stop
+
+# -----------------------------------------------------------------------------
+# Top-of-travel reed switch = ground-truth "fully up" (cover closed / pos 0.0).
+# Assumed normally-open / active-low: closes to ground when the magnet engages,
+# so INPUT_PULLUP + inverted: true reads engaged as "on".
+# -----------------------------------------------------------------------------
+binary_sensor:
+  - platform: gpio
+    id: ${id_prefix}_top_reed
+    name: "Top limit (fully up)"
+    device_class: garage_door
+    entity_category: diagnostic
+    pin:
+      number: ${dry_contact_close_pin}
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on_off: 200ms   # reed flickers near the top; ride it out
+    web_server:
+      sorting_group_id: grp_diagnostic
+      sorting_weight: 10
+    on_press:
+      # Reed engaged = lift at the top -> snap to 0% (closed/up). But ONLY when
+      # raising or idle: while actively lowering (dir > 0) the reed is pulling
+      # off the magnet and bounces, and honoring it there wiped the descent.
+      then:
+        - lambda: |-
+            if (id(${id_prefix}_dir) > 0) return;
+            id(${id_prefix}_position) = 0.0f;
+            id(${id_prefix}_target) = 0.0f;
+            id(${id_prefix}_dir) = 0;
+            id(${id_prefix}_cover).position = 0.0f;
+            id(${id_prefix}_cover).current_operation = cover::COVER_OPERATION_IDLE;
+            id(${id_prefix}_cover).publish_state();
+
+# -----------------------------------------------------------------------------
+# The lift cover. Position lives in the ${id_prefix}_position global (updated by
+# the interval); the lambda reports that global so the cover can never revert.
+# -----------------------------------------------------------------------------
+cover:
+  - platform: template
+    id: ${id_prefix}_cover
+    name: "Lift"
+    icon: mdi:elevator        # lift look; overrides the garage device_class icon
+    device_class: garage
+    has_position: true
+    assumed_state: true
+    lambda: 'return id(${id_prefix}_position);'
+    web_server:
+      sorting_group_id: grp_lift
+      sorting_weight: 10
+    open_action:
+      # Open = lift descends toward loading height (position -> 1.0).
+      - lambda: |-
+          id(${id_prefix}_target) = 1.0f;
+          id(${id_prefix}_dir) = 1;
+          id(${id_prefix}_cover).current_operation = cover::COVER_OPERATION_OPENING;
+          id(${id_prefix}_cover).publish_state();
+      - script.execute: ${id_prefix}_pulse_down
+    close_action:
+      # Close = lift ascends toward the ceiling reed (position -> 0.0).
+      - lambda: |-
+          id(${id_prefix}_target) = 0.0f;
+          id(${id_prefix}_dir) = -1;
+          id(${id_prefix}_cover).current_operation = cover::COVER_OPERATION_CLOSING;
+          id(${id_prefix}_cover).publish_state();
+      - script.execute: ${id_prefix}_pulse_up
+    stop_action:
+      # Halt time accumulation; preserve current position.
+      - lambda: |-
+          id(${id_prefix}_dir) = 0;
+          id(${id_prefix}_target) = id(${id_prefix}_position);
+          id(${id_prefix}_cover).current_operation = cover::COVER_OPERATION_IDLE;
+          id(${id_prefix}_cover).publish_state();
+      - script.execute: ${id_prefix}_pulse_stop
+    position_action:
+      # HA slider: drive toward `pos`, pulsing the right direction. The interval
+      # fires a stop pulse when an intermediate target is reached.
+      - lambda: |-
+          float cur = id(${id_prefix}_position);
+          id(${id_prefix}_target) = pos;
+          if (pos > cur) {
+            id(${id_prefix}_dir) = 1;
+            id(${id_prefix}_cover).current_operation = cover::COVER_OPERATION_OPENING;
+          } else if (pos < cur) {
+            id(${id_prefix}_dir) = -1;
+            id(${id_prefix}_cover).current_operation = cover::COVER_OPERATION_CLOSING;
+          } else {
+            id(${id_prefix}_dir) = 0;
+          }
+          id(${id_prefix}_cover).publish_state();
+      - if:
+          condition:
+            lambda: 'return id(${id_prefix}_dir) > 0;'
+          then:
+            - script.execute: ${id_prefix}_pulse_down
+      - if:
+          condition:
+            lambda: 'return id(${id_prefix}_dir) < 0;'
+          then:
+            - script.execute: ${id_prefix}_pulse_up
+
+# -----------------------------------------------------------------------------
+# Time-based position integrator. Runs only while moving.
+# -----------------------------------------------------------------------------
+interval:
+  - interval: 250ms
+    then:
+      - lambda: |-
+          if (id(${id_prefix}_dir) == 0) return;
+          const float dt = 0.25f;   // seconds per tick
+          float pos = id(${id_prefix}_position);
+          const float tgt = id(${id_prefix}_target);
+          bool reached = false;
+          bool stop_pulse = false;
+          if (id(${id_prefix}_dir) > 0) {            // descending toward 1.0
+            float od = id(${id_prefix}_open_duration).state;
+            if (od > 0.0f) pos += dt / od;
+            if (pos >= tgt) { pos = tgt; reached = true; stop_pulse = (tgt < 0.999f); }
+            if (pos >= 1.0f) { pos = 1.0f; reached = true; stop_pulse = false; }  // AUXX bottom limit
+          } else {                                   // ascending toward 0.0
+            float cd = id(${id_prefix}_close_duration).state;
+            if (cd > 0.0f) pos -= dt / cd;
+            if (pos <= tgt) { pos = tgt; reached = true; stop_pulse = (tgt > 0.001f); }
+            if (pos <= 0.0f) { pos = 0.0f; reached = true; stop_pulse = false; }  // reed / AUXX top limit
+          }
+          id(${id_prefix}_position) = pos;
+          id(${id_prefix}_cover).position = pos;
+          if (reached) {
+            id(${id_prefix}_dir) = 0;
+            id(${id_prefix}_cover).current_operation = cover::COVER_OPERATION_IDLE;
+          } else {
+            id(${id_prefix}_cover).current_operation =
+              (id(${id_prefix}_dir) > 0) ? cover::COVER_OPERATION_OPENING
+                                         : cover::COVER_OPERATION_CLOSING;
+          }
+          id(${id_prefix}_cover).publish_state();
+          if (stop_pulse) id(${id_prefix}_pulse_stop).execute();
+
+# -----------------------------------------------------------------------------
+# Calibration (toggle buttons) + diagnostics
+# -----------------------------------------------------------------------------
+button:
+  # ---- Lift control: always-live Raise / Lower / Stop. These drive the cover's
+  #      actions, so position tracking, the reed snap, and stop-preserve all
+  #      still apply -- but unlike the cover's own gated up/down arrows these are
+  #      never disabled, so you can resume lowering after a mid-stop.
+  - platform: template
+    id: ${id_prefix}_raise
+    name: "Raise"
+    icon: mdi:arrow-up-bold
+    web_server:
+      sorting_group_id: grp_lift
+      sorting_weight: 20
+    on_press:
+      then:
+        - cover.close: ${id_prefix}_cover
+  - platform: template
+    id: ${id_prefix}_lower
+    name: "Lower"
+    icon: mdi:arrow-down-bold
+    web_server:
+      sorting_group_id: grp_lift
+      sorting_weight: 30
+    on_press:
+      then:
+        - cover.open: ${id_prefix}_cover
+  - platform: template
+    id: ${id_prefix}_stop
+    name: "Stop"
+    icon: mdi:stop
+    web_server:
+      sorting_group_id: grp_lift
+      sorting_weight: 40
+    on_press:
+      then:
+        - cover.stop: ${id_prefix}_cover
+
+  # ---- Calibration --------------------------------------------------------
+  - platform: template
+    id: ${id_prefix}_cal_descent
+    name: "Calibrate descent (lower)"
+    icon: mdi:arrow-down-bold-box
+    entity_category: config
+    web_server:
+      sorting_group_id: grp_calibration
+      sorting_weight: 30
+    on_press:
+      then:
+        - lambda: |-
+            if (id(${id_prefix}_cal_mode) == 0) {
+              // START: only from fully UP (reed engaged). Move + timer together.
+              if (id(${id_prefix}_top_reed).state) {
+                id(${id_prefix}_cal_mode) = 1;
+                id(${id_prefix}_cal_start_ms) = millis();
+                id(${id_prefix}_pulse_down).execute();
+                ESP_LOGI("auxx.cal", "Descent calibration started (lowering)");
+              } else {
+                ESP_LOGW("auxx.cal", "Descent calibration needs the lift fully UP (reed engaged)");
+              }
+            } else if (id(${id_prefix}_cal_mode) == 1) {
+              // STOP at the bottom: record + apply to the open (descend) duration.
+              float elapsed = (millis() - id(${id_prefix}_cal_start_ms)) / 1000.0f;
+              id(${id_prefix}_pulse_stop).execute();
+              auto call = id(${id_prefix}_open_duration).make_call();
+              call.set_value(elapsed);
+              call.perform();
+              id(${id_prefix}_position) = 1.0f;   // now fully down
+              id(${id_prefix}_target) = 1.0f;
+              id(${id_prefix}_dir) = 0;
+              id(${id_prefix}_cover).position = 1.0f;
+              id(${id_prefix}_cover).current_operation = cover::COVER_OPERATION_IDLE;
+              id(${id_prefix}_cover).publish_state();
+              id(${id_prefix}_cal_mode) = 0;
+              ESP_LOGI("auxx.cal", "Descent duration measured & applied: %.1f s", elapsed);
+            } else {
+              ESP_LOGW("auxx.cal", "Ascent calibration is in progress; finish that first");
+            }
+
+  - platform: template
+    id: ${id_prefix}_cal_ascent
+    name: "Calibrate ascent (raise)"
+    icon: mdi:arrow-up-bold-box
+    entity_category: config
+    web_server:
+      sorting_group_id: grp_calibration
+      sorting_weight: 40
+    on_press:
+      then:
+        - lambda: |-
+            if (id(${id_prefix}_cal_mode) == 0) {
+              // START: only from fully DOWN. Move + timer together.
+              if (id(${id_prefix}_position) >= 0.99f) {
+                id(${id_prefix}_cal_mode) = 2;
+                id(${id_prefix}_cal_start_ms) = millis();
+                id(${id_prefix}_pulse_up).execute();
+                ESP_LOGI("auxx.cal", "Ascent calibration started (raising)");
+              } else {
+                ESP_LOGW("auxx.cal", "Ascent calibration needs the lift fully DOWN (position ~1.0)");
+              }
+            } else if (id(${id_prefix}_cal_mode) == 2) {
+              // STOP at the top: record + apply to the close (ascend) duration.
+              float elapsed = (millis() - id(${id_prefix}_cal_start_ms)) / 1000.0f;
+              id(${id_prefix}_pulse_stop).execute();
+              auto call = id(${id_prefix}_close_duration).make_call();
+              call.set_value(elapsed);
+              call.perform();
+              id(${id_prefix}_position) = 0.0f;   // now fully up (reed confirms)
+              id(${id_prefix}_target) = 0.0f;
+              id(${id_prefix}_dir) = 0;
+              id(${id_prefix}_cover).position = 0.0f;
+              id(${id_prefix}_cover).current_operation = cover::COVER_OPERATION_IDLE;
+              id(${id_prefix}_cover).publish_state();
+              id(${id_prefix}_cal_mode) = 0;
+              ESP_LOGI("auxx.cal", "Ascent duration measured & applied: %.1f s", elapsed);
+            } else {
+              ESP_LOGW("auxx.cal", "Descent calibration is in progress; finish that first");
+            }
+
+  # ---- Diagnostics --------------------------------------------------------
+  - platform: restart
+    id: ${id_prefix}_restart
+    name: "Restart"
+    entity_category: diagnostic
+    web_server:
+      sorting_group_id: grp_diagnostic
+      sorting_weight: 50
+  - platform: safe_mode
+    id: ${id_prefix}_safe_mode
+    name: "Safe mode boot"
+    entity_category: diagnostic
+    web_server:
+      sorting_group_id: grp_diagnostic
+      sorting_weight: 60
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 120s
+    web_server:
+      sorting_group_id: grp_diagnostic
+      sorting_weight: 30
+
+text_sensor:
+  - platform: version
+    id: ${id_prefix}_firmware_version
+    name: "Firmware Version"
+    web_server:
+      sorting_group_id: grp_diagnostic
+      sorting_weight: 40

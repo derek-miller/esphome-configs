@@ -17,8 +17,22 @@
 SHELL := /bin/bash
 CONFIG_FILE := devices.conf
 SCRIPTS_DIR := scripts
+VENV := .venv
+PYTHON := $(VENV)/bin/python
+PIP := $(VENV)/bin/pip
+ESPHOME := $(VENV)/bin/esphome
 
-.PHONY: help discover list run upload logs validate compile run-all run-config run-base logs-config validate-all clean
+.PHONY: help discover list run upload logs validate compile run-all run-config run-base logs-config validate-all clean venv install
+
+$(VENV):
+	python3 -m venv $(VENV)
+
+install: $(VENV) requirements.txt
+	$(VENV)/bin/pip-sync requirements.txt
+
+requirements.txt: requirements.in $(VENV)
+	$(PIP) install -U pip-tools pip setuptools wheel
+	$(VENV)/bin/pip-compile -q requirements.in -o requirements.txt
 
 help:
 	@echo "ESPHome Device Management"
@@ -40,7 +54,7 @@ help:
 	@echo "  make logs-config CONFIG=x.yaml  - Stream logs from all devices for a config"
 	@echo "  make validate-all          - Validate all device configs"
 
-check-config:
+check-config: install
 	@if [ ! -f "$(CONFIG_FILE)" ]; then \
 		echo "Error: $(CONFIG_FILE) not found."; \
 		echo "Run 'make discover' to generate it."; \
@@ -91,7 +105,7 @@ endif
 		exit 1; \
 	fi
 	@echo "Running: $(CONFIG) -> $(IP)"
-	esphome run --no-logs $(CONFIG) --device $(IP)
+	$(ESPHOME) run --no-logs $(CONFIG) --device $(IP)
 
 upload: run
 
@@ -104,7 +118,7 @@ endif
 		echo "Error: IP '$(IP)' not found"; \
 		exit 1; \
 	fi
-	esphome logs $(CONFIG) --device $(IP)
+	$(ESPHOME) logs $(CONFIG) --device $(IP)
 
 validate: check-config
 ifndef IP
@@ -115,7 +129,7 @@ endif
 		echo "Error: IP '$(IP)' not found"; \
 		exit 1; \
 	fi
-	esphome config $(CONFIG)
+	$(ESPHOME) config $(CONFIG)
 
 compile: check-config
 ifndef IP
@@ -126,7 +140,7 @@ endif
 		echo "Error: IP '$(IP)' not found"; \
 		exit 1; \
 	fi
-	esphome compile $(CONFIG)
+	$(ESPHOME) compile $(CONFIG)
 
 run-all: check-config
 	@set -eo pipefail; \
@@ -139,7 +153,7 @@ run-all: check-config
 			continue; \
 		fi; \
 		echo "=== $$config -> $$ip ==="; \
-		esphome run --no-logs "$$config" --device "$$ip"; \
+		$(ESPHOME) run --no-logs "$$config" --device "$$ip"; \
 		echo ""; \
 	done
 
@@ -163,7 +177,7 @@ endif
 	if [ -z "$(IPS)" ]; then \
 		echo "No devices found for '$(CONFIG)' in $(CONFIG_FILE)"; \
 		echo "Running with mDNS discovery..."; \
-		esphome run --no-logs $(CONFIG); \
+		$(ESPHOME) run --no-logs $(CONFIG); \
 	else \
 		echo "Found devices for $(CONFIG): $(IPS)"; \
 		for ip in $(IPS); do \
@@ -174,7 +188,7 @@ endif
 			fi; \
 			echo ""; \
 			echo "=== $(CONFIG) -> $$ip ==="; \
-			esphome run --no-logs $(CONFIG) --device $$ip; \
+			$(ESPHOME) run --no-logs $(CONFIG) --device $$ip; \
 		done; \
 		echo ""; \
 		echo "All devices updated!"; \
@@ -223,12 +237,12 @@ endif
 	$(eval IPS := $(call lookup_ips,$(CONFIG)))
 	@if [ -z "$(IPS)" ]; then \
 		echo "No devices found for '$(CONFIG)' in $(CONFIG_FILE)"; \
-		esphome logs $(CONFIG); \
+		$(ESPHOME) logs $(CONFIG); \
 	else \
 		echo "Streaming logs from: $(IPS)"; \
 		echo "(Press Ctrl+C to stop)"; \
 		for ip in $(IPS); do \
-			esphome logs $(CONFIG) --device $$ip 2>&1 | sed "s/^/[$$ip] /" & \
+			$(ESPHOME) logs $(CONFIG) --device $$ip 2>&1 | sed "s/^/[$$ip] /" & \
 		done; \
 		wait; \
 	fi
@@ -237,8 +251,8 @@ validate-all: check-config
 	@awk '/^\[.*\]$$/ { print substr($$0, 2, length($$0)-2) }' $(CONFIG_FILE) | sort -u | \
 	while read -r config; do \
 		echo "=== Validating $$config ==="; \
-		esphome config "$$config" > /dev/null && echo "OK" || echo "FAILED"; \
+		$(ESPHOME) config "$$config" > /dev/null && echo "OK" || echo "FAILED"; \
 	done
 
 clean:
-	rm -rf .esphome/
+	rm -rf .esphome/ "$(VENV)"

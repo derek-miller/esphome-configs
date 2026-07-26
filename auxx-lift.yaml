@@ -139,10 +139,11 @@ safe_mode:
 preferences:
   flash_write_interval: 1min
 
-# Sync time with Home Assistant.
+# No Home Assistant on this network — sync time via SNTP.
 time:
-  - platform: homeassistant
-    id: homeassistant_time
+  - platform: sntp
+    id: sntp_time
+    timezone: America/Chicago
 
 # -----------------------------------------------------------------------------
 # Persisted / runtime state

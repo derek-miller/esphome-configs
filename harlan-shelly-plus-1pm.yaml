@@ -1,0 +1,18 @@
+---
+# Shelly Plus 1PM at the harlan site: base config from shelly-plus-1pm.yaml,
+# with WiFi overridden to the harlan network (same pattern as gianos-*.yaml).
+# Reachable from here only via its Tailscale 4via6 address — see devices.conf.
+packages:
+  base: !include shelly-plus-1pm.yaml
+
+wifi:
+  ssid: !secret harlan_wifi_ssid
+  password: !secret harlan_wifi_password
+  min_auth_mode: WPA2
+
+# No Home Assistant on this network — sync time via SNTP; also required by
+# the base config's total_daily_energy sensor.
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: America/Chicago

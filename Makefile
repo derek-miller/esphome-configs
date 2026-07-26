@@ -12,7 +12,7 @@
 # Config format (devices.conf):
 #   [config-file.yaml]
 #   192.168.2.100
-#   192.168.2.101
+#   fd7a:115c:a1e0:b1a:0:2:a00:6   (IPv6 OK, e.g. Tailscale 4via6 for remote sites)
 
 SHELL := /bin/bash
 CONFIG_FILE := devices.conf
@@ -81,14 +81,14 @@ discover:
 define lookup_config
 $(shell awk -v ip="$(1)" ' \
 	/^\[.*\]$$/ { config = substr($$0, 2, length($$0)-2) } \
-	/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/ { split($$0, a, " "); if (a[1] == ip) print config }' $(CONFIG_FILE) 2>/dev/null)
+	/^[0-9a-fA-F][0-9a-fA-F.:]*/ { split($$0, a, " "); if (a[1] == ip) print config }' $(CONFIG_FILE) 2>/dev/null)
 endef
 
 list: check-config
 	@echo "Configured devices:"
 	@awk ' \
 		/^\[.*\]$$/ { config = substr($$0, 2, length($$0)-2); printf "\n%s\n", config } \
-		/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/ { printf "  %s\n", $$0 }' $(CONFIG_FILE)
+		/^[0-9a-fA-F][0-9a-fA-F.:]*/ { printf "  %s\n", $$0 }' $(CONFIG_FILE)
 	@echo ""
 
 run: check-config
@@ -146,9 +146,10 @@ run-all: check-config
 	@set -eo pipefail; \
 	awk ' \
 		/^\[.*\]$$/ { config = substr($$0, 2, length($$0)-2) } \
-		/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/ { print config ":" $$1 }' $(CONFIG_FILE) | \
+		/^[0-9a-fA-F][0-9a-fA-F.:]*/ { print config ":" $$1 }' $(CONFIG_FILE) | \
 	while IFS=: read -r config ip; do \
-		if ! ping -c1 -W1 "$$ip" >/dev/null 2>&1; then \
+		case "$$ip" in *:*) p="ping6 -c1";; *) p="ping -c1 -W1";; esac; \
+			if ! $$p "$$ip" >/dev/null 2>&1; then \
 			echo "=== $$config -> $$ip === SKIPPED (unreachable)"; \
 			continue; \
 		fi; \
@@ -161,7 +162,7 @@ run-all: check-config
 define lookup_ips
 $(shell awk -v cfg="$(1)" ' \
 	/^\[.*\]$$/ { in_section = (substr($$0, 2, length($$0)-2) == cfg) } \
-	in_section && /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/ { split($$0, a, " "); print a[1] }' $(CONFIG_FILE) 2>/dev/null)
+	in_section && /^[0-9a-fA-F][0-9a-fA-F.:]*/ { split($$0, a, " "); print a[1] }' $(CONFIG_FILE) 2>/dev/null)
 endef
 
 run-config: check-config
@@ -181,7 +182,8 @@ endif
 	else \
 		echo "Found devices for $(CONFIG): $(IPS)"; \
 		for ip in $(IPS); do \
-			if ! ping -c1 -W1 $$ip >/dev/null 2>&1; then \
+			case "$$ip" in *:*) p="ping6 -c1";; *) p="ping -c1 -W1";; esac; \
+			if ! $$p "$$ip" >/dev/null 2>&1; then \
 				echo ""; \
 				echo "=== $(CONFIG) -> $$ip === SKIPPED (unreachable)"; \
 				continue; \
@@ -217,7 +219,7 @@ endif
 	else \
 		base_ips=$$(awk -v cfg="$(BASE)" ' \
 			/^\[.*\]$$/ { in_section = (substr($$0, 2, length($$0)-2) == cfg) } \
-			in_section && /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/ { found=1 } \
+			in_section && /^[0-9a-fA-F][0-9a-fA-F.:]*/ { found=1 } \
 			END { print found+0 }' $(CONFIG_FILE)); \
 		if [ "$$base_ips" -eq 1 ]; then \
 			echo ""; \

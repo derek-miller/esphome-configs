@@ -1,0 +1,120 @@
+---
+# =============================================================================
+# ratgdo32 v3.2 (ESP32) — dry-contact wiring, inheriting upstream via packages.
+#
+# Mirrors ratgdo/esphome-ratgdo `v32board_drycontact.yaml`, with this repo's
+# conventions layered on top: WiFi and web-server auth come from secrets.yaml
+# (main network), everything else follows gianos-ratgdo-v25i.yaml. The actual
+# dry-contact logic (ratgdo component, cover, endstops) is pulled at build time
+# from upstream base_drycontact.yaml — see packages.remote_package below.
+#
+# One file, many units: name_add_mac_suffix gives each board a unique
+# ratgdo32-<mac> hostname; list each unit's IP under this file in devices.conf.
+# =============================================================================
+
+substitutions:
+  id_prefix: ratgdo32
+  friendly_name: "ratgdo32"
+  uart_tx_pin: GPIO17
+  uart_rx_pin: GPIO21
+  input_obst_pin: GPIO4
+  # TC/TO aux-harness inputs: reed contacts for the fully-open / fully-closed
+  # door limits.
+  dry_contact_open_pin: GPIO13
+  dry_contact_close_pin: GPIO14
+  # Stock discrete (3-button) trigger outputs on the harness SD/SO pins;
+  # unused here (single-button install via the red ctrl terminal).
+  discrete_open_pin: GPIO26
+  discrete_close_pin: GPIO25
+
+esphome:
+  name: ${id_prefix}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: true
+  min_version: 2026.4.0
+  project:
+    name: ratgdo.v32board_drycontact
+    version: "32.0"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+dashboard_import:
+  package_import_url: github://ratgdo/esphome-ratgdo/v32board_drycontact.yaml@main
+
+packages:
+  remote_package:
+    url: https://github.com/ratgdo/esphome-ratgdo
+    files: [base_drycontact.yaml]
+    refresh: 1s
+  # remote_package: !include
+  #   file: base_drycontact.yaml
+
+# Local web UI with auth (credentials from secrets.yaml).
+web_server:
+  version: 3
+  local: true
+  auth:
+    username: !secret web_server_username
+    password: !secret web_server_password
+
+switch:
+  - platform: ratgdo
+    id: ${id_prefix}_led
+    type: led
+    pin:
+      number: GPIO2
+      ignore_strapping_warning: true
+    name: "LED"
+    entity_category: config
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 120s
+
+  # DHT22: DATA on the aux harness TL pin. VCC/GND are tapped from 3.3V and
+  # ground points on the board, NOT the harness — the harness SO/SD pins are
+  # transistor outputs (discrete open/close triggers), not GPIO, so they can
+  # neither source power nor carry data.
+  - platform: dht
+    pin:
+      number: GPIO27
+      mode:
+        input: true
+        pullup: false
+    model: DHT22
+    temperature:
+      name: "Temperature"
+    humidity:
+      name: "Humidity"
+    update_interval: 60s
+
+# No Home Assistant on this network — sync time via SNTP.
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: America/Chicago
+
+api:
+  id: api_server
+  encryption:
+    key: !secret api_encryption_key
+
+improv_serial:
+
+esp32_improv:
+  authorizer: none
+
+wifi:
+  ap:
+    ssid: "ratgdo"
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  min_auth_mode: WPA2
+
+captive_portal:
+
+logger:

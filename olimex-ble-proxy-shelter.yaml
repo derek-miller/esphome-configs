@@ -2,4 +2,4 @@ packages:
   base: !include olimex-ble-proxy.yaml
 
 esphome:
-  build_path: build/olimex-bluetooth-proxy-office
+  build_path: build/olimex-bluetooth-proxy-shelter

@@ -3,6 +3,22 @@ packages:
 
 esphome:
   build_path: build/olimex-bluetooth-proxy-rack
+  # Fan speed/direction restore fires on_speed_set/on_direction_set during
+  # startup; suppress those triggers until 15s after boot so a reboot can't
+  # turn fans on or flip their direction.
+  on_boot:
+    priority: -100
+    then:
+      - delay: 15s
+      - globals.set:
+          id: boot_done
+          value: "true"
+
+globals:
+  - id: boot_done
+    type: bool
+    restore_value: false
+    initial_value: "false"
 
 button:
   - platform: template
@@ -555,10 +571,15 @@ fan:
       - script.execute: send_bp_fan_state
     on_speed_set:
       - lambda: |-
+          if (!id(boot_done)) return;
           auto call = id(bp_fan).turn_on();
           call.perform();
     on_direction_set:
-      - button.press: button_bp_fan_reverse
+      - if:
+          condition:
+            lambda: "return id(boot_done);"
+          then:
+            - button.press: button_bp_fan_reverse
 
   - platform: template
     name: Bedroom 2 Fan
@@ -572,10 +593,15 @@ fan:
       - script.execute: send_br2_fan_state
     on_speed_set:
       - lambda: |-
+          if (!id(boot_done)) return;
           auto call = id(br2_fan).turn_on();
           call.perform();
     on_direction_set:
-      - button.press: button_br2_fan_reverse
+      - if:
+          condition:
+            lambda: "return id(boot_done);"
+          then:
+            - button.press: button_br2_fan_reverse
 
 switch:
   - platform: template

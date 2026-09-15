@@ -44,6 +44,10 @@ time:
     timezone: America/Chicago
 
 api:
+  # Never reboot just because the native-API client is gone -- a controller
+  # (Control4) outage, or having no persistent API client at all, must not
+  # power-cycle or toggle the load. Default reboot_timeout is 15min.
+  reboot_timeout: 0s
   id: api_server
 
 improv_serial:

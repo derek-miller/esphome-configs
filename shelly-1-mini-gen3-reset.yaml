@@ -1,0 +1,28 @@
+---
+# Reset-only variant of the shared Shelly 1 Mini Gen3 base: an always-on relay
+# where "off" only ever means a momentary power cycle of the load. The relay
+# powers up at every boot, and any off (HA, web UI, physical switch/button)
+# auto-returns to on after 10s. The base's 80C over-temp cutoff still wins: a
+# thermal off stays off, since relay_temp is still hot when it fires and the
+# auto-return is skipped.
+#
+# Use it for any load that must stay powered and only be rebooted, not
+# switched off.
+packages:
+  base: !include shelly-1-mini-gen3.yaml
+
+esphome:
+  name: shelly-1-mini-gen3-reset
+  friendly_name: Shelly 1 Mini Gen3 Reset-Only
+
+switch:
+  # Extend the relay defined in the base package rather than redefining it.
+  - id: !extend relay
+    restore_mode: ALWAYS_ON
+    on_turn_off:
+      - if:
+          condition:
+            lambda: 'return std::isnan(id(relay_temp).state) || id(relay_temp).state < 75.0;'
+          then:
+            - delay: 10s
+            - switch.turn_on: relay

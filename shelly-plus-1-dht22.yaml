@@ -127,3 +127,10 @@ sensor:
 #  pin:
 #    number: GPIO0
 #    inverted: true
+
+# Non-HA time source (Control4 doesn't provide time); needed by
+# total_daily_energy / any time-based logic and for correct log timestamps.
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: America/Chicago

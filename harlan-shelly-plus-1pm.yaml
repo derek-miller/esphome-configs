@@ -9,10 +9,3 @@ wifi:
   ssid: !secret harlan_wifi_ssid
   password: !secret harlan_wifi_password
   min_auth_mode: WPA2
-
-# No Home Assistant on this network — sync time via SNTP; also required by
-# the base config's total_daily_energy sensor.
-time:
-  - platform: sntp
-    id: sntp_time
-    timezone: America/Chicago

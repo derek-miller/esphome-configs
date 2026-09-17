@@ -100,9 +100,6 @@ esp32_ble_tracker:
 
 # Enable Home Assistant API
 api:
-  # Never reboot just because the native-API client is gone -- a controller
-  # (Control4) outage, or having no persistent API client at all, must not
-  # power-cycle or toggle the load. Default reboot_timeout is 15min.
   reboot_timeout: 0s
   #  encryption:
   #    key: !secret api_encryption_key

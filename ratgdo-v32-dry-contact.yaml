@@ -1,16 +1,8 @@
 ---
-# =============================================================================
-# ratgdo32 v3.2 (ESP32) — dry-contact wiring, inheriting upstream via packages.
-#
-# Mirrors ratgdo/esphome-ratgdo `v32board_drycontact.yaml`, with this repo's
-# conventions layered on top: WiFi and web-server auth come from secrets.yaml
-# (main network), everything else follows gianos-ratgdo-v25i.yaml. The actual
-# dry-contact logic (ratgdo component, cover, endstops) is pulled at build time
-# from upstream base_drycontact.yaml — see packages.remote_package below.
-#
-# One file, many units: name_add_mac_suffix gives each board a unique
-# ratgdo32-<mac> hostname; list each unit's IP under this file in devices.conf.
-# =============================================================================
+# ratgdo32 v3.2 (ESP32), dry-contact wiring. Dry-contact logic comes from
+# upstream base_drycontact.yaml via packages; conventions follow
+# gianos-ratgdo-v25i.yaml. One file, many units — name_add_mac_suffix gives each
+# board a ratgdo32-<mac> hostname; list each unit's IP in devices.conf.
 
 substitutions:
   id_prefix: ratgdo32
@@ -18,14 +10,11 @@ substitutions:
   uart_tx_pin: GPIO17
   uart_rx_pin: GPIO21
   input_obst_pin: GPIO4
-  # TC/TO aux-harness inputs: reed contacts for the fully-open / fully-closed
-  # door limits.
-  dry_contact_open_pin: GPIO13
-  dry_contact_close_pin: GPIO14
-  # Stock discrete (3-button) trigger outputs on the harness SD/SO pins;
-  # unused here (single-button install via the red ctrl terminal).
-  discrete_open_pin: GPIO26
-  discrete_close_pin: GPIO25
+  dry_contact_open_pin: GPIO13   # TC harness pad -> open-limit reed
+  dry_contact_close_pin: GPIO14  # TO harness pad -> close-limit reed
+  discrete_open_pin: GPIO26      # SD harness pad; unused (single-button install)
+  discrete_close_pin: GPIO25     # SO harness pad; unused
+  dht_data_pin: GPIO32           # soldered to the ESP32 module pad, not a harness pad
 
 esphome:
   name: ${id_prefix}
@@ -52,7 +41,6 @@ packages:
   # remote_package: !include
   #   file: base_drycontact.yaml
 
-# Local web UI with auth (credentials from secrets.yaml).
 web_server:
   version: 3
   local: true
@@ -75,13 +63,13 @@ sensor:
     name: "WiFi Signal"
     update_interval: 120s
 
-  # DHT22: DATA on the aux harness TL pin. VCC/GND are tapped from 3.3V and
-  # ground points on the board, NOT the harness — the harness SO/SD pins are
-  # transistor outputs (discrete open/close triggers), not GPIO, so they can
-  # neither source power nor carry data.
+  # DHT22 breakout: DATA to the ESP32 module pad, VCC/GND to 3.3V and ground on
+  # the board. No aux-harness pad works — TC/TO/TL sit behind ~7.7k series
+  # resistors, SD/SO are transistor outputs. pullup: false, the breakout has its
+  # own 4.7k.
   - platform: dht
     pin:
-      number: GPIO27
+      number: ${dht_data_pin}
       mode:
         input: true
         pullup: false
@@ -91,12 +79,6 @@ sensor:
     humidity:
       name: "Humidity"
     update_interval: 60s
-
-# No Home Assistant on this network — sync time via SNTP.
-time:
-  - platform: sntp
-    id: sntp_time
-    timezone: America/Chicago
 
 api:
   # Never reboot just because the native-API client is gone -- a controller
@@ -122,3 +104,8 @@ wifi:
 captive_portal:
 
 logger:
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: America/Chicago

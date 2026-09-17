@@ -1,6 +1,6 @@
 ---
 packages:
-  base: !include shelly-plus-1pm.yaml
+  base: !include shelly-plus-1.yaml
 
 wifi:
   ssid: !secret harlan_wifi_ssid

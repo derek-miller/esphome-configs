@@ -42,6 +42,11 @@ captive_portal:
 
 logger:
 
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: America/Chicago
+
 api:
   # Never reboot just because the native-API client is gone -- a controller
   # (Control4) outage, or having no persistent API client at all, must not
@@ -127,10 +132,3 @@ sensor:
 #  pin:
 #    number: GPIO0
 #    inverted: true
-
-# Non-HA time source (Control4 doesn't provide time); needed by
-# total_daily_energy / any time-based logic and for correct log timestamps.
-time:
-  - platform: sntp
-    id: sntp_time
-    timezone: America/Chicago

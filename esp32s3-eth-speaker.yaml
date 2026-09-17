@@ -1,5 +1,5 @@
 esphome:
-  name: waveshare-esp32s3-eth-speaker
+  name: esp32s3-eth-speaker
   friendly_name: Waveshare ESP32-S3-ETH Speaker
   min_version: 2025.8.0
   name_add_mac_suffix: true
@@ -18,6 +18,12 @@ psram:
   mode: octal
   speed: 80MHz
 
+web_server:
+  local: true
+  auth:
+    username: !secret web_server_username
+    password: !secret web_server_password
+
 # Wired ethernet via W5500 (SPI)
 ethernet:
   type: W5500
@@ -30,6 +36,12 @@ ethernet:
 
 logger:
   level: DEBUG
+  #baud_rate: 0
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: America/Chicago
 
 api:
   # Never reboot just because the native-API client is gone -- a controller
@@ -44,18 +56,40 @@ ota:
     id: ota_esphome
     password: !secret ota_password
 
-web_server:
-  local: true
-  auth:
-    username: !secret web_server_username
-    password: !secret web_server_password
+button:
+  - platform: safe_mode
+    id: button_safe_mode
+    name: Safe Mode Boot
+
+  - platform: factory_reset
+    id: button_factory_reset
+    name: Factory Reset
+
+  - platform: restart
+    id: button_restart
+    name: Restart
+
+output:
+  - platform: gpio
+    id: cam_power
+    pin:
+      number: GPIO8
+      inverted: true
+
+switch:
+  - platform: output
+    id: cam_power_switch
+    name: Camera Power
+    output: cam_power
+    restore_mode: ALWAYS_ON
+    internal: true
 
 # I2S bus (shared between speaker and mic)
 #
 # MAX98357A Wiring:
 #   BCLK -> GPIO16 (header pin 32)
 #   LRC  -> GPIO17 (header pin 34)
-#   DIN  -> GPIO33 (header pin 20)
+#   DIN  -> GPIO43 (header pin 21, UART0 TX)
 #   VIN  -> 3.3V or 5V (5V = louder)
 #   GND  -> GND
 #   GAIN -> unconnected (default 9dB)
@@ -64,44 +98,50 @@ web_server:
 # INMP441 Wiring:
 #   SCK  -> GPIO16 (header pin 32)
 #   WS   -> GPIO17 (header pin 34)
-#   SD   -> GPIO34 (header pin 19)
+#   SD   -> GPIO44 (header pin 22, UART0 RX)
 #   VDD  -> 3.3V
 #   GND  -> GND
 #   L/R  -> GND (left channel)
-i2s_audio:
-  i2s_lrclk_pin: GPIO17
-  i2s_bclk_pin: GPIO16
+#
+# NOTE: GPIO43/GPIO44 are the default UART0 pins. This audio wiring assumes
+# UART logging stays disabled.
+# Temporarily disabled while isolating camera web server startup.
+# i2s_audio:
+#   i2s_lrclk_pin: GPIO17
+#   i2s_bclk_pin: GPIO16
 
 # Speaker output (MAX98357A I2S DAC)
-speaker:
-  - platform: i2s_audio
-    id: i2s_speaker
-    dac_type: external
-    i2s_dout_pin: GPIO33
-    channel: mono
-    sample_rate: 16000
+# Temporarily disabled while isolating camera web server startup.
+# speaker:
+#   - platform: i2s_audio
+#     id: i2s_speaker
+#     dac_type: external
+#     i2s_dout_pin: GPIO43
+#     channel: mono
+#     sample_rate: 16000
 
 # Media player (exposes speaker to HA for TTS and audio streaming)
-media_player:
-  - platform: speaker
-    id: speaker_media_player
-    name: Speaker
-    announcement_pipeline:
-      speaker: i2s_speaker
+# media_player:
+#   - platform: speaker
+#     id: speaker_media_player
+#     name: Speaker
+#     announcement_pipeline:
+#       speaker: i2s_speaker
+#     volume_initial: 0.35
+#     volume_max: 0.6
 
 # Microphone input (INMP441 I2S MEMS)
-microphone:
-  - platform: i2s_audio
-    id: i2s_mic
-    adc_type: external
-    i2s_din_pin: GPIO34
-    channel: left
-    sample_rate: 16000
-    bits_per_sample: 32bit
+# Temporarily disabled while isolating I2S speaker distortion.
+# microphone:
+#   - platform: i2s_audio
+#     id: i2s_mic
+#     adc_type: external
+#     i2s_din_pin: GPIO44
+#     channel: left
+#     sample_rate: 16000
+#     bits_per_sample: 32bit
 
 # OV5640 camera (onboard DVP connector)
-#
-# Camera DVP Wiring (directly on board connector):
 #   VSYNC -> GPIO1
 #   HREF  -> GPIO2
 #   XCLK  -> GPIO3
@@ -116,15 +156,17 @@ microphone:
 #   D2    -> GPIO46
 #   D1    -> GPIO45
 #   D0    -> GPIO41
+i2c:
+  - id: cam_i2c
+    sda: GPIO48
+    scl: GPIO47
 esp32_camera:
   id: ov5640_cam
   name: Camera
   external_clock:
     pin: GPIO3
     frequency: 20MHz
-  i2c_pins:
-    sda: GPIO48
-    scl: GPIO47
+  i2c_id: cam_i2c
   data_pins:
     - GPIO41  # D0
     - GPIO45  # D1
@@ -142,37 +184,8 @@ esp32_camera:
   idle_framerate: 0.2fps
   max_framerate: 15fps
 
-# Voice assistant (requires HA with Assist pipeline configured)
-# Uncomment to enable -- uses the same speaker and mic defined above.
-# voice_assistant:
-#   microphone: i2s_mic
-#   speaker: i2s_speaker
-#   use_wake_word: true
-#   noise_suppression_level: 2
-#   auto_gain: 31dBFS
-#   volume_multiplier: 2.0
-
-# On-device wake word (optional, uses PSRAM)
-# micro_wake_word:
-#   models:
-#     - model: okay_nabu
-
-button:
-  - platform: safe_mode
-    id: button_safe_mode
-    name: Safe Mode Boot
-
-  - platform: factory_reset
-    id: button_factory_reset
-    name: Factory Reset
-
-  - platform: restart
-    id: button_restart
-    name: Restart
-
-# Non-HA time source (Control4 doesn't provide time); needed by
-# total_daily_energy / any time-based logic and for correct log timestamps.
-time:
-  - platform: sntp
-    id: sntp_time
-    timezone: America/Chicago
+esp32_camera_web_server:
+  - port: 8080
+    mode: stream
+  - port: 8081
+    mode: snapshot

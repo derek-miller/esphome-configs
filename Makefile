@@ -22,7 +22,7 @@ PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 ESPHOME := $(VENV)/bin/esphome
 
-.PHONY: help discover list run upload logs validate compile run-all run-config run-base logs-config validate-all clean venv install
+.PHONY: help discover list run upload logs validate compile run-all run-config run-base logs-config validate-all clean venv install play tts weather
 
 $(VENV):
 	python3 -m venv $(VENV)
@@ -33,6 +33,29 @@ install: $(VENV) requirements.txt
 requirements.txt: requirements.in $(VENV)
 	$(PIP) install -U pip-tools pip setuptools wheel
 	$(VENV)/bin/pip-compile -q requirements.in -o requirements.txt
+
+play: install
+ifndef IP
+	$(error IP is required. Usage: make play IP=192.168.2.x)
+endif
+	$(PYTHON) $(SCRIPTS_DIR)/play-test-tone.py $(IP)
+
+tts: install
+ifndef IP
+	$(error IP is required. Usage: make tts IP=192.168.2.x TEXT="Hello world")
+endif
+ifndef TEXT
+	$(error TEXT is required. Usage: make tts IP=192.168.2.x TEXT="Hello world")
+endif
+	$(PYTHON) $(SCRIPTS_DIR)/play-tts.py $(IP) "$(TEXT)" $(VOICE)
+
+weather: install
+ifndef IP
+	$(error IP is required. Usage: make weather IP=192.168.2.x)
+endif
+	$(eval REPORT := $(shell $(PYTHON) $(SCRIPTS_DIR)/weather.py "$(or $(ADDRESS),37064)"))
+	@echo "$(REPORT)"
+	$(PYTHON) $(SCRIPTS_DIR)/play-tts.py $(IP) "$(REPORT)" $(or $(VOICE),nova)
 
 help:
 	@echo "ESPHome Device Management"

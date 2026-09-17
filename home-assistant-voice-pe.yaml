@@ -1,0 +1,7 @@
+packages:
+  remote_package:
+    url: https://github.com/esphome/home-assistant-voice-pe
+    ref: dev
+    files:
+      - home-assistant-voice.yaml
+    refresh: 1d

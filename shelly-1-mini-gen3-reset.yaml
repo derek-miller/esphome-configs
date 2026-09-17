@@ -1,10 +1,12 @@
 ---
 # Reset-only variant of the shared Shelly 1 Mini Gen3 base: an always-on relay
 # where "off" only ever means a momentary power cycle of the load. The relay
-# powers up at every boot, and any off (HA, web UI, physical switch/button)
-# auto-returns to on after 10s. The base's 80C over-temp cutoff still wins: a
-# thermal off stays off, since relay_temp is still hot when it fires and the
-# auto-return is skipped.
+# powers up at every boot; a manual off auto-returns after 10s; and a periodic
+# safety-net turns it back on whenever it is found off while the temperature is
+# safe. That safety-net matters because the base turns the relay off at >80C and
+# never turns it back on -- so a brief over-temp reading (a real spike or ADC
+# noise) would otherwise leave this "always on" load stuck off until a reboot.
+# A genuine sustained overheat still keeps it off until it cools below 70C.
 #
 # Use it for any load that must stay powered and only be rebooted, not
 # switched off.
@@ -25,4 +27,19 @@ switch:
             lambda: 'return std::isnan(id(relay_temp).state) || id(relay_temp).state < 75.0;'
           then:
             - delay: 10s
+            - switch.turn_on: relay
+
+# Safety net for the always-on guarantee: if the relay is ever off while the
+# temperature is safe (< 70C -- below the base's 80C cutoff, with hysteresis),
+# turn it back on. Recovers a stuck over-temp trip, a missed auto-return, or a
+# stray input toggle within one interval; a real overheat stays off until <70C.
+interval:
+  - interval: 30s
+    then:
+      - if:
+          condition:
+            and:
+              - switch.is_off: relay
+              - lambda: 'return std::isnan(id(relay_temp).state) || id(relay_temp).state < 70.0;'
+          then:
             - switch.turn_on: relay

@@ -111,14 +111,12 @@ wifi:
   ap:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
+  power_save_mode: none
   min_auth_mode: WPA2
 
 captive_portal:
 
 improv_serial:
-
-esp32_improv:
-  authorizer: none
 
 logger:
 

@@ -5,3 +5,4 @@ packages:
 wifi:
   ssid: !secret harlan_wifi_ssid
   password: !secret harlan_wifi_password
+  power_save_mode: none

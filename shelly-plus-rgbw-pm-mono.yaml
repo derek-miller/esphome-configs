@@ -18,7 +18,9 @@ wifi:
   ap:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
-  power_save_mode: none
+  # Not none: with the radio always on, these sealed boards idle close to the
+  # thermal cutoff.
+  power_save_mode: light
   min_auth_mode: WPA2
 
 captive_portal:

@@ -80,6 +80,25 @@ sensor:
       name: "Humidity"
     update_interval: 60s
 
+# The dry-contact protocol only re-derives door state when a limit input
+# changes, so a glitch (e.g. the opener losing power) can leave a stale state
+# such as CLOSING or OPEN with the close limit made. An asserted limit is always
+# ground truth: when one disagrees with the state, re-read both limits.
+interval:
+  - interval: 30s
+    then:
+      - lambda: |-
+          using esphome::ratgdo::DoorState;
+          bool open_lim = id(${id_prefix}_dry_contact_open).state;
+          bool close_lim = id(${id_prefix}_dry_contact_close).state;
+          if (open_lim == close_lim) return;
+          DoorState st = *id(${id_prefix}).door_state;
+          if ((close_lim && st != DoorState::CLOSED) || (open_lim && st != DoorState::OPEN)) {
+            ESP_LOGW("drycontact", "Door state %s disagrees with limits (open=%d close=%d); resyncing",
+                     LOG_STR_ARG(esphome::ratgdo::DoorState_to_string(st)), open_lim, close_lim);
+            id(${id_prefix}).sync();
+          }
+
 api:
   reboot_timeout: 0s
   id: api_server

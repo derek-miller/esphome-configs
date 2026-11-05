@@ -143,6 +143,8 @@ safe_mode:
 preferences:
   flash_write_interval: 1min
 
+debug:
+
 # -----------------------------------------------------------------------------
 # Persisted / runtime state
 # -----------------------------------------------------------------------------
@@ -546,6 +548,17 @@ sensor:
     web_server:
       sorting_group_id: grp_diagnostic
       sorting_weight: 30
+  - platform: uptime
+    name: "Uptime"
+    web_server:
+      sorting_group_id: grp_diagnostic
+      sorting_weight: 70
+  - platform: debug
+    free:
+      name: "Free Heap"
+      web_server:
+        sorting_group_id: grp_diagnostic
+        sorting_weight: 80
 
 text_sensor:
   - platform: version
@@ -554,3 +567,9 @@ text_sensor:
     web_server:
       sorting_group_id: grp_diagnostic
       sorting_weight: 40
+  - platform: debug
+    reset_reason:
+      name: "Reset Reason"
+      web_server:
+        sorting_group_id: grp_diagnostic
+        sorting_weight: 90
